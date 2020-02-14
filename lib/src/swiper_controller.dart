@@ -15,12 +15,16 @@ class SwiperController extends IndexController {
   // `SwiperPluginConfig` is available.
   static const int BUILD = 5;
 
+  //when Scroll
+  static const int SCROLL = 6;
+
   // available when `event` == SwiperController.BUILD
   SwiperPluginConfig config;
 
   // available when `event` == SwiperController.SWIPE
   // this value is PageViewController.pos
   double pos;
+  double maxPos;
 
   int index;
   bool animation;
@@ -37,6 +41,11 @@ class SwiperController extends IndexController {
   void stopAutoplay() {
     event = SwiperController.STOP_AUTOPLAY;
     this.autoplay = false;
+    notifyListeners();
+  }
+
+  void scroll() {
+    event = SwiperController.SCROLL;
     notifyListeners();
   }
 }

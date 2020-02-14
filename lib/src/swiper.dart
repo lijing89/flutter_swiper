@@ -59,6 +59,9 @@ class Swiper extends StatefulWidget {
   ///disable auto play when interaction
   final bool autoplayDisableOnInteraction;
 
+  ///listen swiper scroll
+  final bool isListenScroll;
+
   ///auto play transition duration (in millisecond)
   final int duration;
 
@@ -143,19 +146,20 @@ class Swiper extends StatefulWidget {
     this.itemHeight,
     this.itemWidth,
     this.outer: false,
+    this.isListenScroll: false,
     this.scale,
     this.fade,
   })  : assert(itemBuilder != null || transformer != null,
-            "itemBuilder and transformItemBuilder must not be both null"),
+  "itemBuilder and transformItemBuilder must not be both null"),
         assert(
-            !loop ||
-                ((loop &&
-                        layout == SwiperLayout.DEFAULT &&
-                        (indicatorLayout == PageIndicatorLayout.SCALE ||
-                            indicatorLayout == PageIndicatorLayout.COLOR ||
-                            indicatorLayout == PageIndicatorLayout.NONE)) ||
-                    (loop && layout != SwiperLayout.DEFAULT)),
-            "Only support `PageIndicatorLayout.SCALE` and `PageIndicatorLayout.COLOR`when layout==SwiperLayout.DEFAULT in loop mode"),
+        !loop ||
+            ((loop &&
+                layout == SwiperLayout.DEFAULT &&
+                (indicatorLayout == PageIndicatorLayout.SCALE ||
+                    indicatorLayout == PageIndicatorLayout.COLOR ||
+                    indicatorLayout == PageIndicatorLayout.NONE)) ||
+                (loop && layout != SwiperLayout.DEFAULT)),
+        "Only support `PageIndicatorLayout.SCALE` and `PageIndicatorLayout.COLOR`when layout==SwiperLayout.DEFAULT in loop mode"),
         super(key: key);
 
   factory Swiper.children({
@@ -321,6 +325,11 @@ abstract class _SwiperTimerMixin extends State<Swiper> {
           }
         }
         break;
+      case SwiperController.SCROLL:
+        {
+          //when scroll,you can do something
+        }
+        break;
     }
   }
 
@@ -383,6 +392,8 @@ class _SwiperState extends _SwiperTimerMixin {
 
   TransformerPageController _pageController;
 
+  bool _isListenScroll = false;
+
   Widget _wrapTap(BuildContext context, int index) {
     return new GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -392,9 +403,14 @@ class _SwiperState extends _SwiperTimerMixin {
       child: widget.itemBuilder(context, index),
     );
   }
-
+  void _onScrollController() {
+    widget.controller.pos = _pageController.position.pixels;
+    widget.controller.maxPos = _pageController.position.maxScrollExtent;
+    widget.controller.scroll();
+  }
   @override
   void initState() {
+    _isListenScroll = widget.isListenScroll;
     _activeIndex = widget.index ?? 0;
     if (_isPageViewLayout()) {
       _pageController = new TransformerPageController(
@@ -402,8 +418,11 @@ class _SwiperState extends _SwiperTimerMixin {
           loop: widget.loop,
           itemCount: widget.itemCount,
           reverse:
-              widget.transformer == null ? false : widget.transformer.reverse,
+          widget.transformer == null ? false : widget.transformer.reverse,
           viewportFraction: widget.viewportFraction);
+    }
+    if(_isListenScroll){
+      _pageController.addListener(_onScrollController);
     }
     super.initState();
   }
@@ -436,11 +455,18 @@ class _SwiperState extends _SwiperTimerMixin {
             itemCount: widget.itemCount,
             reverse: _getReverse(widget),
             viewportFraction: widget.viewportFraction);
+
+        if(_isListenScroll){
+          _pageController.addListener(_onScrollController);
+        }
       }
     } else {
       scheduleMicrotask(() {
         // So that we have a chance to do `removeListener` in child widgets.
         if (_pageController != null) {
+          if(_isListenScroll){
+            _pageController?.removeListener(_onScrollController);
+          }
           _pageController.dispose();
           _pageController = null;
         }
@@ -486,7 +512,7 @@ class _SwiperState extends _SwiperTimerMixin {
       PageTransformer transformer = widget.transformer;
       if (widget.scale != null || widget.fade != null) {
         transformer =
-            new ScaleAndFadeTransformer(scale: widget.scale, fade: widget.fade);
+        new ScaleAndFadeTransformer(scale: widget.scale, fade: widget.fade);
       }
 
       Widget child = new TransformerPageView(
@@ -662,17 +688,17 @@ abstract class _SubSwiper extends StatefulWidget {
 
   _SubSwiper(
       {Key key,
-      this.loop,
-      this.itemHeight,
-      this.itemWidth,
-      this.duration,
-      this.curve,
-      this.itemBuilder,
-      this.controller,
-      this.index,
-      this.itemCount,
-      this.scrollDirection: Axis.horizontal,
-      this.onIndexChanged})
+        this.loop,
+        this.itemHeight,
+        this.itemWidth,
+        this.duration,
+        this.curve,
+        this.itemBuilder,
+        this.controller,
+        this.index,
+        this.itemCount,
+        this.scrollDirection: Axis.horizontal,
+        this.onIndexChanged})
       : super(key: key);
 
   @override
@@ -704,18 +730,18 @@ class _TinderSwiper extends _SubSwiper {
     Axis scrollDirection,
   })  : assert(itemWidth != null && itemHeight != null),
         super(
-            loop: loop,
-            key: key,
-            itemWidth: itemWidth,
-            itemHeight: itemHeight,
-            itemBuilder: itemBuilder,
-            curve: curve,
-            duration: duration,
-            controller: controller,
-            index: index,
-            onIndexChanged: onIndexChanged,
-            itemCount: itemCount,
-            scrollDirection: scrollDirection);
+          loop: loop,
+          key: key,
+          itemWidth: itemWidth,
+          itemHeight: itemHeight,
+          itemBuilder: itemBuilder,
+          curve: curve,
+          duration: duration,
+          controller: controller,
+          index: index,
+          onIndexChanged: onIndexChanged,
+          itemCount: itemCount,
+          scrollDirection: scrollDirection);
 
   @override
   State<StatefulWidget> createState() {
@@ -738,18 +764,18 @@ class _StackSwiper extends _SubSwiper {
     int itemCount,
     Axis scrollDirection,
   }) : super(
-            loop: loop,
-            key: key,
-            itemWidth: itemWidth,
-            itemHeight: itemHeight,
-            itemBuilder: itemBuilder,
-            curve: curve,
-            duration: duration,
-            controller: controller,
-            index: index,
-            onIndexChanged: onIndexChanged,
-            itemCount: itemCount,
-            scrollDirection: scrollDirection);
+      loop: loop,
+      key: key,
+      itemWidth: itemWidth,
+      itemHeight: itemHeight,
+      itemBuilder: itemBuilder,
+      curve: curve,
+      duration: duration,
+      controller: controller,
+      index: index,
+      onIndexChanged: onIndexChanged,
+      itemCount: itemCount,
+      scrollDirection: scrollDirection);
 
   @override
   State<StatefulWidget> createState() {
